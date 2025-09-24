@@ -12,12 +12,12 @@ import {
 } from "react-native";
 import { AuthContext } from "../../contexts/AuthContext";
 
-const ACCENT = "#6C8DFF";
-const BG = "#12151C";
-const BG_MID = "#1C2230";
-const TEXT = "#E6EAF2";
-const MUTED = "#8A93A6";
-const BORDER = "#2A3242";
+const ACCENT = "#8B4A9C";
+const BG = "#1A0F1F";
+const BG_MID = "#2D1B35";
+const TEXT = "#F0E8F5";
+const MUTED = "#9B7DA8";
+const BORDER = "#3E2A47";
 
 export default function RegisterScreen(): JSX.Element {
   const [name, setName] = useState<string>("");
@@ -27,7 +27,7 @@ export default function RegisterScreen(): JSX.Element {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
-  
+
   const { register } = useContext(AuthContext);
 
   const canSubmit = useMemo(() => {
@@ -69,140 +69,201 @@ export default function RegisterScreen(): JSX.Element {
       <StatusBar barStyle="light-content" />
       <Text style={styles.title}>Create Account</Text>
 
-      <View style={styles.form}>
-        {/* Name */}
-        <View className="input-row" style={styles.inputRow}>
-          <Text style={styles.leftIcon}>👤</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Full name"
-            placeholderTextColor={MUTED}
-            value={name}
-            onChangeText={setName}
-          />
+      <View style={styles.formCard}>
+        <View style={styles.form}>
+          {/* Name */}
+          <View className="input-row" style={styles.inputRow}>
+            <Text style={styles.leftIcon}>👤</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Full name"
+              placeholderTextColor={MUTED}
+              value={name}
+              onChangeText={setName}
+              selectionColor={ACCENT}
+            />
+          </View>
+
+          {/* Email */}
+          <View style={[styles.inputRow, { marginTop: 12 }]}>
+            <Text style={styles.leftIcon}>@</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor={MUTED}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
+              selectionColor={ACCENT}
+            />
+          </View>
+
+          {/* Password */}
+          <View style={[styles.inputRow, { marginTop: 12 }]}>
+            <Text style={styles.leftIcon}>*</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Password (min 6 chars)"
+              placeholderTextColor={MUTED}
+              autoCapitalize="none"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+              selectionColor={ACCENT}
+            />
+          </View>
+
+          {/* Confirm Password */}
+          <View style={[styles.inputRow, { marginTop: 12 }]}>
+            <Text style={styles.leftIcon}>*</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm password"
+              placeholderTextColor={MUTED}
+              autoCapitalize="none"
+              secureTextEntry
+              value={confirm}
+              onChangeText={setConfirm}
+              selectionColor={ACCENT}
+            />
+          </View>
+
+          {/* Error */}
+          {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+          {/* Register button */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={[styles.primaryBtn, (!canSubmit || isLoading) && { opacity: 0.6 }]}
+            disabled={!canSubmit || isLoading}
+            onPress={handleRegister}
+          >
+            <Text style={styles.primaryText}>
+              {isLoading ? "Registering..." : "Register"}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Back to login */}
+          <Pressable
+            onPress={() => router.navigate("/(auth)/login")}
+            style={styles.linkRow}
+            hitSlop={8}
+          >
+            <Text style={styles.mutedText}>Already have an account? </Text>
+            <Text style={styles.linkText}>Sign In</Text>
+          </Pressable>
         </View>
-
-        {/* Email */}
-        <View style={[styles.inputRow, { marginTop: 12 }]}>
-          <Text style={styles.leftIcon}>@</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor={MUTED}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-          />
-        </View>
-
-        {/* Password */}
-        <View style={[styles.inputRow, { marginTop: 12 }]}>
-          <Text style={styles.leftIcon}>*</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Password (min 6 chars)"
-            placeholderTextColor={MUTED}
-            autoCapitalize="none"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-        </View>
-
-        {/* Confirm Password */}
-        <View style={[styles.inputRow, { marginTop: 12 }]}>
-          <Text style={styles.leftIcon}>*</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm password"
-            placeholderTextColor={MUTED}
-            autoCapitalize="none"
-            secureTextEntry
-            value={confirm}
-            onChangeText={setConfirm}
-          />
-        </View>
-
-        {/* Error */}
-        {!!error && (
-          <Text style={{ color: "#ff6b6b", marginTop: 10, fontSize: 12 }}>
-            {error}
-          </Text>
-        )}
-
-        {/* Register button */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          style={[
-            styles.primaryBtn,
-            (!canSubmit || isLoading) && { opacity: 0.5 },
-          ]}
-          disabled={!canSubmit || isLoading}
-          onPress={handleRegister}
-        >
-          <Text style={styles.primaryText}>
-            {isLoading ? "Registering..." : "Register"}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Back to login */}
-        <Pressable
-          onPress={() => router.navigate("/(auth)/login")}
-          style={styles.linkRow}
-          hitSlop={8}
-        >
-          <Text style={styles.mutedText}>Already have an account? </Text>
-          <Text style={styles.linkText}>Sign In</Text>
-        </Pressable>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  /* Layout base */
   container: {
     flex: 1,
     backgroundColor: BG,
     paddingHorizontal: 24,
+    paddingVertical: 32,
     justifyContent: "center",
   },
+
+  /* Título */
   title: {
     alignSelf: "center",
     color: TEXT,
-    fontSize: 24,
-    fontWeight: "800",
-    letterSpacing: 1,
-    marginBottom: 28,
+    fontSize: 28,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+    marginBottom: 18,
+    textShadowColor: "rgba(0,0,0,0.25)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
+
+  /* Tarjeta del formulario */
+  formCard: {
+    width: "100%",
+    borderRadius: 18,
+    backgroundColor: "#26172E", // variación dentro de la paleta
+    borderWidth: 1,
+    borderColor: BORDER,
+    padding: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+
   form: { width: "100%" },
+
+  /* Inputs */
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    height: 52,
-    borderRadius: 14,
+    height: 56,
+    borderRadius: 16,
     backgroundColor: BG_MID,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: "#4A3355", // un poco más claro que BORDER
+    overflow: "hidden",
   },
   leftIcon: {
-    width: 24,
+    width: 26,
     textAlign: "center",
     color: MUTED,
-    fontWeight: "700",
+    fontWeight: "800",
+    fontSize: 14,
+    opacity: 0.95,
   },
-  input: { flex: 1, color: TEXT, paddingHorizontal: 8 },
+  input: {
+    flex: 1,
+    color: TEXT,
+    paddingHorizontal: 10,
+    fontSize: 15,
+  },
+
+  /* Error */
+  errorText: {
+    color: "#F9B4CF",
+    backgroundColor: "rgba(184, 51, 106, 0.12)",
+    borderColor: "rgba(184, 51, 106, 0.35)",
+    borderWidth: 1,
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    fontSize: 12,
+  },
+
+  /* Botón primario */
   primaryBtn: {
     marginTop: 18,
-    height: 54,
-    borderRadius: 14,
+    height: 56,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: ACCENT,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
   },
-  primaryText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  primaryText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 0.3,
+  },
+
+  /* Link inferior */
   linkRow: { alignSelf: "center", marginTop: 14, flexDirection: "row" },
-  mutedText: { color: MUTED, fontSize: 12 },
-  linkText: { color: ACCENT, fontSize: 12, fontWeight: "800" },
+  mutedText: { color: MUTED, fontSize: 12, letterSpacing: 0.2 },
+  linkText: { color: ACCENT, fontSize: 12, fontWeight: "900", letterSpacing: 0.3 },
 });

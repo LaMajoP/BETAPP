@@ -2,21 +2,21 @@
 import { router } from "expo-router";
 import React, { JSX, useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
   Pressable,
   StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
-const ACCENT = "#6C8DFF";
-const BG = "#12151C";
-const BG_MID = "#1C2230";
-const TEXT = "#E6EAF2";
-const MUTED = "#8A93A6";
-const BORDER = "#2A3242";
+const ACCENT = "#8B4A9C";
+const BG = "#1A0F1F";
+const BG_MID = "#2D1B35";
+const TEXT = "#F0E8F5";
+const MUTED = "#9B7DA8";
+const BORDER = "#3E2A47";
 
 export default function ResetScreen(): JSX.Element {
   const [step, setStep] = useState<1 | 2>(1);
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   linkText: { color: ACCENT, fontSize: 12, fontWeight: "800" },
 
   infoPill: {
-    backgroundColor: "#202636",
+    backgroundColor: "#2D1B35",
     borderColor: BORDER,
     borderWidth: 1,
     borderRadius: 12,

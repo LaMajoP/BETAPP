@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet } from "react-native";
-const BG="#12151C", TEXT="#E6EAF2", MUTED="#8A93A6";
+import { StyleSheet, Text, View } from "react-native";
+const BG="#1A0F1F", TEXT="#F0E8F5", MUTED="#9B7DA8";
 export default function Live() {
   return (
     <View style={s.c}>

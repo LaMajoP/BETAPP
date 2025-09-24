@@ -1,7 +1,7 @@
 // app/main/(tabs)/search.tsx
-import { View, Text, StyleSheet, StatusBar } from "react-native";
+import { StatusBar, StyleSheet, Text, View } from "react-native";
 
-const BG = "#12151C", TEXT = "#E6EAF2", MUTED = "#8A93A6";
+const BG = "#1A0F1F", TEXT = "#F0E8F5", MUTED = "#9B7DA8";
 
 export default function Search() {
   return (

@@ -12,13 +12,12 @@ import {
   View,
 } from "react-native";
 
-
-const BG = "#12151C";
-const BG_MID = "#1C2230";
-const TEXT = "#E6EAF2";
-const MUTED = "#8A93A6";
-const ACCENT = "#6C8DFF";
-const BORDER = "#2A3242";
+const BG = "#1A0F1F";
+const BG_MID = "#2D1B35";
+const TEXT = "#F0E8F5";
+const MUTED = "#9B7DA8";
+const ACCENT = "#8B4A9C";
+const BORDER = "#3E2A47";
 
 export default function LoginScreen(): JSX.Element {
   const [email, setEmail] = useState<string>("");
@@ -32,14 +31,13 @@ export default function LoginScreen(): JSX.Element {
   const onSignIn = async () => {
     setError("");
     setIsSigningIn(true);
-    
-    // Set a timeout to ensure the button resets even if login hangs
+
     const loginTimeout = setTimeout(() => {
       console.log("Login timeout - resetting button state");
       setIsSigningIn(false);
       setError("Login timeout - please try again");
-    }, 10000); // 10 second timeout
-    
+    }, 10000);
+
     try {
       console.log("Starting login process...");
       await login(email, password);
@@ -62,92 +60,94 @@ export default function LoginScreen(): JSX.Element {
 
       <Text style={styles.title}>BetApp</Text>
 
-      <View style={styles.form}>
-        {/* Email */}
-        <View style={styles.inputRow}>
-          <Text style={styles.leftIcon}>@</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor={MUTED}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-            returnKeyType="next"
-          />
-        </View>
+      <View style={styles.formCard}>
+        <View style={styles.form}>
+          {/* Email */}
+          <View style={styles.inputRow}>
+            <Text style={styles.leftIcon}>@</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor={MUTED}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
+              returnKeyType="next"
+              selectionColor={ACCENT}
+            />
+          </View>
 
-        {/* Password */}
-        <View style={[styles.inputRow, { marginTop: 12 }]}>
-          <Text style={styles.leftIcon}>*</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor={MUTED}
-            autoCapitalize="none"
-            secureTextEntry={!showPass}
-            value={password}
-            onChangeText={setPassword}
-            returnKeyType="done"
-          />
+          {/* Password */}
+          <View style={[styles.inputRow, { marginTop: 12 }]}>
+            <Text style={styles.leftIcon}>*</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor={MUTED}
+              autoCapitalize="none"
+              secureTextEntry={!showPass}
+              value={password}
+              onChangeText={setPassword}
+              returnKeyType="done"
+              selectionColor={ACCENT}
+            />
+            <Pressable
+              onPress={() => setShowPass((v) => !v)}
+              style={styles.eyeBtn}
+              hitSlop={10}
+            >
+              <Text style={styles.eyeText}>{showPass ? "Hide" : "Show"}</Text>
+            </Pressable>
+          </View>
+
+          {/* Forgot password */}
           <Pressable
-            onPress={() => setShowPass((v) => !v)}
-            style={styles.eyeBtn}
-            hitSlop={10}
+            onPress={() => router.navigate("/(auth)/reset")}
+            style={styles.linkRow}
+            hitSlop={8}
           >
-            <Text style={styles.eyeText}>{showPass ? "Hide" : "Show"}</Text>
+            <Text style={styles.linkText}>Forgot Password?</Text>
           </Pressable>
-        </View>
 
-        {/* Forgot password */}
-        <Pressable
-          onPress={() => router.navigate("/(auth)/reset")}
-          style={styles.linkRow}
-          hitSlop={8}
-        >
-          <Text style={styles.linkText}>Forgot Password?</Text>
-        </Pressable>
+          {/* Error */}
+          {!!error && <Text style={styles.errorText}>{error}</Text>}
 
-        {/* Error */}
-        {!!error && (
-          <Text style={styles.errorText}>
-            {error}
-          </Text>
-        )}
+          {/* Sign In */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={[styles.signInBtn, isSigningIn && { opacity: 0.7 }]}
+            onPress={onSignIn}
+            disabled={isSigningIn}
+          >
+            <Text style={styles.signInText}>
+              {isSigningIn ? "Signing in..." : "Sign In"}
+            </Text>
+          </TouchableOpacity>
 
-        {/* Sign In */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          style={[styles.signInBtn, isSigningIn && { opacity: 0.6 }]}
-          onPress={onSignIn}
-          disabled={isSigningIn}
-        >
-          <Text style={styles.signInText}>
-            {isSigningIn ? "Signing in..." : "Sign In"}
-          </Text>
-        </TouchableOpacity>
+          {/* Register */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={[styles.signInBtn, styles.secondaryBtn]}
+            onPress={() => router.navigate("/(auth)/register")}
+          >
+            <Text style={[styles.signInText, styles.secondaryBtnText]}>
+              Register
+            </Text>
+          </TouchableOpacity>
 
-        {/* Register */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          style={styles.signInBtn}
-          onPress={() => router.navigate("/(auth)/register")}
-        >
-          <Text style={styles.signInText}>Register</Text>
-        </TouchableOpacity>
-
-        {/* Social (visual) */}
-        <Text style={styles.socialLegend}>Or by social accounts</Text>
-        <View style={styles.socialRow}>
-          <View style={styles.socialCircle}>
-            <Text style={styles.socialText}>f</Text>
-          </View>
-          <View style={styles.socialCircle}>
-            <Text style={styles.socialText}>G</Text>
-          </View>
-          <View style={styles.socialCircle}>
-            <Text style={styles.socialText}>t</Text>
+          {/* Social (visual) */}
+          <Text style={styles.socialLegend}>Or by social accounts</Text>
+          <View style={styles.socialRow}>
+            <View style={styles.socialCircle}>
+              <Text style={styles.socialText}>f</Text>
+            </View>
+            <View style={styles.socialCircle}>
+              <Text style={styles.socialText}>G</Text>
+            </View>
+            <View style={styles.socialCircle}>
+              <Text style={styles.socialText}>t</Text>
+            </View>
           </View>
         </View>
       </View>
@@ -161,101 +161,174 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BG,
     paddingHorizontal: 24,
+    paddingVertical: 32,
     justifyContent: "center",
   },
+
   title: {
     alignSelf: "center",
     color: TEXT,
-    fontSize: 24,
-    fontWeight: "800",
-    letterSpacing: 1,
-    marginBottom: 28,
+    fontSize: 28,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+    marginBottom: 18,
+    textShadowColor: "rgba(0,0,0,0.25)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
+
+  formCard: {
+    width: "100%",
+    borderRadius: 18,
+    backgroundColor: "#26172E", // sutil variación dentro de la paleta
+    borderWidth: 1,
+    borderColor: BORDER,
+    padding: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+
   form: {
     width: "100%",
   },
+
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    height: 52,
-    borderRadius: 14,
+    height: 56,
+    borderRadius: 16,
     backgroundColor: BG_MID,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: "#4A3355", // un pelín más claro que BORDER
+    overflow: "hidden",
   },
+
   leftIcon: {
-    width: 22,
+    width: 26,
     textAlign: "center",
     color: MUTED,
-    fontWeight: "700",
+    fontWeight: "800",
+    fontSize: 14,
+    opacity: 0.95,
   },
+
   input: {
     flex: 1,
     color: TEXT,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
+    fontSize: 15,
   },
+
   eyeBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: BORDER,
   },
+
   eyeText: {
     color: ACCENT,
-    fontWeight: "700",
+    fontWeight: "800",
     fontSize: 12,
+    letterSpacing: 0.4,
   },
+
   linkRow: {
     alignSelf: "flex-end",
-    marginTop: 14,
+    marginTop: 12,
     flexDirection: "row",
   },
+
   linkText: {
     color: ACCENT,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "900",
+    letterSpacing: 0.4,
   },
+
   errorText: {
-    color: "#FF6B6B",
-    marginTop: 10,
+    color: "#F9B4CF",
+    backgroundColor: "rgba(184, 51, 106, 0.12)",
+    borderColor: "rgba(184, 51, 106, 0.35)",
+    borderWidth: 1,
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
     fontSize: 12,
   },
+
   signInBtn: {
     marginTop: 18,
-    height: 54,
-    borderRadius: 14,
+    height: 56,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: ACCENT,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
   },
+
   signInText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "800",
+    fontWeight: "900",
+    letterSpacing: 0.3,
   },
+
+  // botón secundario visual (mismo componente, solo estilos)
+  secondaryBtn: {
+    backgroundColor: "transparent",
+    borderColor: ACCENT,
+  },
+  secondaryBtnText: {
+    color: ACCENT,
+  },
+
   socialLegend: {
     textAlign: "center",
     color: MUTED,
     marginTop: 18,
     fontSize: 12,
+    letterSpacing: 0.3,
   },
+
   socialRow: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 10,
+    marginTop: 12,
   },
+
   socialCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: 10,
     backgroundColor: BG_MID,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: "rgba(139, 74, 156, 0.45)", // ACCENT con transparencia
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
+
   socialText: {
     color: TEXT,
-    fontWeight: "800",
+    fontWeight: "900",
+    fontSize: 16,
+    letterSpacing: 0.4,
   },
 });

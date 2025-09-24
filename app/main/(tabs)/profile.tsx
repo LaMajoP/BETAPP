@@ -21,14 +21,14 @@ import {
 } from "react-native";
 import { supabase } from "../../../utils/supabase"; // <- ajusta si tu path es distinto
 
-const BG = "#12151C",
-  TEXT = "#E6EAF2",
-  MUTED = "#8A93A6",
-  BG_MID = "#1C2230",
-  BORDER = "#2A3242",
-  ACCENT = "#6C8DFF",
-  RED = "#FF6B6B",
-  GREEN = "#38D39F";
+const BG = "#1A0F1F",
+  TEXT = "#F0E8F5",
+  MUTED = "#9B7DA8",
+  BG_MID = "#2D1B35",
+  BORDER = "#3E2A47",
+  ACCENT = "#8B4A9C",
+  RED = "#B8336A",
+  GREEN = "#7B4397";
 
 type ProfileRow = {
   name: string | null;
@@ -388,45 +388,59 @@ export default function Profile() {
     <View style={s.root}>
       <StatusBar barStyle="light-content" />
 
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
-        {/* Header / user card */}
-        <View style={s.cardRow}>
-          <View style={s.avatarWrap}>
-            <Image
-              source={{
-                uri: photoUri ?? "https://i.pinimg.com/564x/bd/cc/de/bdccde33dea7c9e549b325635d2c432e.jpg",
-              }}
-              style={s.avatar}
-            />
+      <ScrollView contentContainerStyle={{ paddingBottom: 30 }} showsVerticalScrollIndicator={false}>
+        {/* Enhanced Header */}
+        <View style={s.headerContainer}>
+          <View style={s.headerBackground} />
+          <View style={s.profileHeader}>
+            <View style={s.avatarSection}>
+              <View style={s.avatarWrap}>
+                <Image
+                  source={{
+                    uri: photoUri ?? "https://i.pinimg.com/564x/bd/cc/de/bdccde33dea7c9e549b325635d2c432e.jpg",
+                  }}
+                  style={s.avatar}
+                />
+                <Pressable
+                  style={s.cameraBtn}
+                  onPress={async () => {
+                    try {
+                      if (!permission?.granted) {
+                        const res = await requestPermission();
+                        if (!res.granted) return;
+                      }
+                      setCameraOpen(true);
+                    } catch (_e) {
+                      // noop
+                    }
+                  }}
+                >
+                  <Feather name="camera" size={14} color={"#fff"} />
+                </Pressable>
+              </View>
+              
+              <View style={s.userInfo}>
+                <Text style={s.userName}>{displayOrPlaceholder(profile.name)}</Text>
+                <Text style={s.userEmail}>{profile.email ?? user?.email ?? "No email"}</Text>
+              </View>
+              
               <Pressable
-              style={s.cameraBtn}
-              onPress={async () => {
-                try {
-                  if (!permission?.granted) {
-                    const res = await requestPermission();
-                    if (!res.granted) return;
-                  }
-                  setCameraOpen(true);
-                } catch (_e) {
-                  // noop
-                }
-              }}
-            >
-              <Feather name="camera" size={14} color={TEXT} />
-            </Pressable>
+                onPress={openEdit}
+                style={({ pressed }) => [s.editButton, pressed && s.pressed]}
+              >
+                <Feather name="edit-3" size={16} color={"#fff"} />
+                <Text style={s.editButtonText}>Edit Profile</Text>
+              </Pressable>
+            </View>
+            
+            <View style={s.balanceCard}>
+              <Text style={s.balanceLabel}>💰 Available Balance</Text>
+              <Text style={s.balanceAmount}>$0.00</Text>
+              <Pressable style={s.addFundsBtn}>
+                <Text style={s.addFundsText}>+ Add Funds</Text>
+              </Pressable>
+            </View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.name}>{displayOrPlaceholder(profile.name)}</Text>
-            <Text style={s.sub}>Available balance</Text>
-            <Text style={s.money}>$ 0.00</Text>
-          </View>
-          <Pressable
-            onPress={openEdit}
-            style={({ pressed }) => [s.ghostBtn, pressed && s.pressed]}
-          >
-            <Feather name="edit-3" size={18} color={TEXT} />
-            <Text style={s.ghostText}>Edit</Text>
-          </Pressable>
         </View>
 
         {/* Loading / errors */}
@@ -439,7 +453,7 @@ export default function Profile() {
           </View>
         ) : null}
         {!!errorMsg && (
-          <Text style={{ color: "#ff6b6b", marginTop: 10, fontSize: 12 }}>
+          <Text style={{ color: "#B8336A", marginTop: 10, fontSize: 12 }}>
             {errorMsg}
           </Text>
         )}
@@ -839,6 +853,28 @@ function Section({ title, children }: React.PropsWithChildren<{ title: string }>
   );
 }
 
+function EnhancedSection({ 
+  title, 
+  icon, 
+  children, 
+  isDanger = false 
+}: React.PropsWithChildren<{ 
+  title: string; 
+  icon?: string; 
+  isDanger?: boolean; 
+}>) {
+  return (
+    <View style={s.enhancedSection}>
+      <View style={s.sectionHeaderRow}>
+        <Text style={[s.enhancedSectionTitle, isDanger && { color: RED }]}>{title}</Text>
+      </View>
+      <View style={[s.enhancedSectionCard, isDanger && { borderColor: RED + "40" }]}>
+        {children}
+      </View>
+    </View>
+  );
+}
+
 function Chevron({ color = MUTED }: { color?: string }) {
   return <Ionicons name="chevron-forward" size={18} color={color} />;
 }
@@ -877,6 +913,176 @@ function Row({
 /* ---------- Styles ---------- */
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: BG },
+  
+  // Enhanced Header Styles
+  headerContainer: {
+    position: "relative",
+    marginBottom: 20,
+  },
+  headerBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 200,
+    backgroundColor: ACCENT,
+    opacity: 0.1,
+    borderRadius: 20,
+  },
+  profileHeader: {
+    padding: 20,
+    paddingTop: 30,
+  },
+  avatarSection: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  avatarWrap: { 
+    alignItems: "center", 
+    marginBottom: 15, 
+    position: "relative",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  avatar: { 
+    width: 80, 
+    height: 80, 
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: ACCENT,
+  },
+  cameraBtn: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: ACCENT,
+    borderWidth: 3,
+    borderColor: BG,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  userInfo: {
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  userName: { 
+    color: TEXT, 
+    fontSize: 22, 
+    fontWeight: "900",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  userEmail: { 
+    color: MUTED, 
+    fontSize: 14,
+    textAlign: "center",
+  },
+  editButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: ACCENT,
+    shadowColor: ACCENT,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  editButtonText: { 
+    color: "#fff", 
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  
+  // Balance Card
+  balanceCard: {
+    backgroundColor: BG_MID,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: BORDER,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  balanceLabel: {
+    color: MUTED,
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  balanceAmount: {
+    color: TEXT,
+    fontSize: 28,
+    fontWeight: "900",
+    marginBottom: 12,
+  },
+  addFundsBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: ACCENT + "20",
+    borderWidth: 1,
+    borderColor: ACCENT,
+  },
+  addFundsText: {
+    color: ACCENT,
+    fontWeight: "700",
+    fontSize: 12,
+  },
+
+  // Content Container
+  contentContainer: {
+    paddingHorizontal: 16,
+  },
+
+  // Enhanced Sections
+  enhancedSection: {
+    marginBottom: 24,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  enhancedSectionTitle: {
+    color: TEXT,
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  enhancedSectionCard: {
+    backgroundColor: BG_MID,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+
+  // Legacy styles (keep for compatibility)
   cardRow: {
     flexDirection: "row",
     backgroundColor: BG_MID,
@@ -885,26 +1091,6 @@ const s = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     alignItems: "center",
-  },
-  avatarWrap: { alignItems: "center", marginRight: 12, position: "relative" },
-  avatar: { width: 64, height: 64, borderRadius: 32 },
-  cameraBtn: {
-    position: "absolute",
-    right: -2,
-    bottom: -2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: ACCENT,
-    borderWidth: 2,
-    borderColor: BG_MID,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.25,
-    shadowRadius: 2,
-    elevation: 2,
   },
   name: { color: TEXT, fontSize: 18, fontWeight: "800" },
   sub: { color: MUTED, marginTop: 4 },
@@ -927,27 +1113,27 @@ const s = StyleSheet.create({
   },
 
   row: {
-    minHeight: 56,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    minHeight: 64,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
   },
-  rowPressed: { backgroundColor: "#17202B" },
+  rowPressed: { backgroundColor: "#2D1B35" },
   rowIcon: {
-    width: 28,
+    width: 32,
     alignItems: "center",
-    marginRight: 10,
+    marginRight: 12,
   },
   rowLabel: { color: TEXT, fontSize: 15, fontWeight: "700" },
-  rowHelper: { color: MUTED, marginTop: 2, fontSize: 12 },
+  rowHelper: { color: MUTED, marginTop: 3, fontSize: 12, lineHeight: 16 },
 
   badge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: 12,
     borderWidth: 1,
   },
   badgeText: { fontSize: 11, fontWeight: "800" },
@@ -967,16 +1153,22 @@ const s = StyleSheet.create({
   pressed: { opacity: 0.8 },
 
   logoutBtn: {
+    marginHorizontal: 16,
     marginTop: 20,
-    height: 52,
-    borderRadius: 14,
+    height: 56,
+    borderRadius: 16,
     backgroundColor: RED,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
+    shadowColor: RED,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  logoutText: { color: "#fff", fontWeight: "900", fontSize: 15 },
+  logoutText: { color: "#fff", fontWeight: "900", fontSize: 16 },
 
   // Modal
   modalOverlay: {
@@ -1009,7 +1201,7 @@ const s = StyleSheet.create({
   modalInput: {
     height: 46,
     borderRadius: 12,
-    backgroundColor: "#1C2230",
+    backgroundColor: "#2D1B35",
     borderWidth: 1,
     borderColor: BORDER,
     paddingHorizontal: 12,

@@ -1,11 +1,11 @@
 // app/main/(tabs)/_layout.tsx
+import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { Platform, Image } from "react-native";
-import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Platform } from "react-native";
 
-const ACCENT = "#6C8DFF";
-const BG = "#0E1218";
-const ICON = "#E6EAF2";
+const ACCENT = "#8B4A9C";
+const BG = "#1A0F1F";
+const ICON = "#F0E8F5";
 
 export default function TabsLayout() {
   return (
@@ -17,7 +17,7 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: ICON,
         tabBarStyle: {
           backgroundColor: BG,
-          borderTopColor: "#1B2330",
+          borderTopColor: "#3E2A47",
           height: Platform.select({ ios: 84, android: 66 }),
           paddingTop: 8,
           paddingBottom: Platform.select({ ios: 22, android: 10 }),
