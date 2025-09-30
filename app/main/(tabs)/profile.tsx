@@ -40,7 +40,7 @@ type ProfileRow = {
 };
 
 export default function Profile() {
-  const { logout, isLoading: isAuthLoading, user } = useContext(AuthContext); //si quito el isLoading me deja desloguear
+  const { logout, isLoading: isAuthLoading, user } = useContext(AuthContext); 
   
   console.log("Profile component - User state:", { user, isAuthLoading });
 

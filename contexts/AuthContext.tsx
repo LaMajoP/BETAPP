@@ -17,6 +17,12 @@ type AuthContextProps = {
 
 export const AuthContext = createContext<AuthContextProps>({} as AuthContextProps);
 
+// Custom hook para usar el contexto
+import { useContext } from "react";
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserShape | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);

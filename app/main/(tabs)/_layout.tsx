@@ -64,7 +64,22 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* 5) PROFILE (derecha) -> app/main/(tabs)/profile.tsx */}
+      {/* 5) CHATS -> app/main/(tabs)/chats.tsx */}
+      <Tabs.Screen
+        name="chats"
+        options={{
+          title: "Chats",
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "chatbubble" : "chatbubble-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* 6) PROFILE (derecha) -> app/main/(tabs)/profile.tsx */}
       <Tabs.Screen
         name="profile"
         options={{
