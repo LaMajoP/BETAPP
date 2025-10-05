@@ -1,3 +1,23 @@
+// Subir imagen de chat a Supabase Storage y devolver la URL pública
+export async function uploadChatImageBuffer(localUri: string, userId: string, chatId: string): Promise<string | null> {
+  try {
+    const response = await fetch(localUri);
+    const buffer = await response.arrayBuffer();
+    const fileName = `${chatId}/${userId}_${Date.now()}.jpg`;
+    const { error: uploadError } = await supabase.storage
+      .from("chat-images")
+      .upload(fileName, buffer, { contentType: "image/jpeg", upsert: true });
+    if (uploadError) {
+      console.warn("Chat image upload error:", uploadError.message);
+      return null;
+    }
+    const { data } = supabase.storage.from("chat-images").getPublicUrl(fileName);
+    return data.publicUrl ?? null;
+  } catch (e) {
+    console.warn("Chat image upload exception:", e);
+    return null;
+  }
+}
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
@@ -65,10 +85,35 @@ export async function getMessagesForChat(chat_id: string) {
   return data ?? [];
 }
 
+
 // Enviar mensaje
 export async function sendMessage(chat_id: string, sender_id: string, content: string) {
   const { error } = await supabase
     .from('messages')
     .insert([{ chat_id, sender_id, content }]);
   if (error) throw error;
+}
+
+// Subir imagen de chat a Supabase Storage y devolver la URL
+export async function uploadChatImage(uri: string, userId: string, chatId: string): Promise<string> {
+  // Obtener el nombre del archivo
+  const fileExt = uri.split('.').pop();
+  const fileName = `${chatId}_${userId}_${Date.now()}.${fileExt}`;
+  const path = `chat-images/${fileName}`;
+
+  // Obtener el blob de la imagen
+  const response = await fetch(uri);
+  const blob = await response.blob();
+
+  // Subir a Supabase Storage
+  const { error } = await supabase.storage.from('chat-images').upload(path, blob, {
+    cacheControl: '3600',
+    upsert: false,
+    contentType: blob.type,
+  });
+  if (error) throw error;
+
+  // Obtener la URL pública
+  const { data } = supabase.storage.from('chat-images').getPublicUrl(path);
+  return data.publicUrl;
 }

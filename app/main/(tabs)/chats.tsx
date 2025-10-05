@@ -1,8 +1,9 @@
+import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from "react";
 import { FlatList, Image, Text, TextInput, TouchableOpacity, View } from "react-native";
 // Importa las funciones de supabase que vas a crear
 import { useAuth } from "../../../contexts/AuthContext";
-import { getMessagesForChat, searchUsersByEmail, sendMessage, startChatWithUser } from "../../../utils/supabase";
+import { getMessagesForChat, searchUsersByEmail, sendMessage, startChatWithUser, uploadChatImageBuffer } from "../../../utils/supabase";
 
 
 type UserResult = { id: string; email: string };
@@ -16,6 +17,10 @@ const ChatsTab = () => {
   const [chatId, setChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageResult[]>([]);
   const [message, setMessage] = useState("");
+  // Nuevo estado para imagen seleccionada
+  const [selectedImage, setSelectedImage] = useState<any>(null);
+  const [sendingImage, setSendingImage] = useState(false);
+  const [imageError, setImageError] = useState("");
 
   // Buscar usuarios por email
   const handleSearch = async () => {
@@ -111,28 +116,95 @@ const ChatsTab = () => {
             <FlatList
               data={messages}
               keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <View style={{ alignSelf: item.sender_id === user?.id ? 'flex-end' : 'flex-start', backgroundColor: item.sender_id === user?.id ? colors.userMsg : colors.otherMsg, borderRadius: 14, padding: 10, marginVertical: 4, maxWidth: '80%', shadowColor: colors.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 2 }}>
-                  <Text style={{ color: colors.text, fontSize: 15 }}>{item.content}</Text>
-                </View>
-              )}
+              renderItem={({ item }) => {
+                const isImage = typeof item.content === 'string' && (item.content.startsWith('http://') || item.content.startsWith('https://')) && (item.content.endsWith('.jpg') || item.content.endsWith('.jpeg') || item.content.endsWith('.png') || item.content.endsWith('.webp'));
+                return (
+                  <View style={{ alignSelf: item.sender_id === user?.id ? 'flex-end' : 'flex-start', backgroundColor: item.sender_id === user?.id ? colors.userMsg : colors.otherMsg, borderRadius: 14, padding: 10, marginVertical: 4, maxWidth: '80%', shadowColor: colors.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 2 }}>
+                    {isImage ? (
+                      <Image source={{ uri: item.content }} style={{ width: 180, height: 180, borderRadius: 12 }} resizeMode="cover" />
+                    ) : (
+                      <Text style={{ color: colors.text, fontSize: 15 }}>{item.content}</Text>
+                    )}
+                  </View>
+                );
+              }}
               inverted
               ItemSeparatorComponent={() => <View style={{ height: 2 }} />}
               ListEmptyComponent={<Text style={{ color: colors.muted, textAlign: 'center', marginTop: 32 }}>No hay mensajes aún</Text>}
             />
           </View>
-          <View style={{ flexDirection: "row", alignItems: 'center', marginBottom: 4 }}>
-            <TextInput
-              placeholder="Escribe un mensaje..."
-              placeholderTextColor={colors.muted}
-              value={message}
-              onChangeText={setMessage}
-              style={{ backgroundColor: colors.inputBg, color: colors.text, borderRadius: 16, padding: 12, flex: 1, borderWidth: 1, borderColor: colors.border, fontSize: 16, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 }}
-            />
-            <TouchableOpacity onPress={handleSendMessage} style={{ marginLeft: 10, backgroundColor: colors.primary, borderRadius: 16, paddingHorizontal: 20, justifyContent: "center", alignItems: 'center', height: 48, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 }}>
-              <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 16 }}>Enviar</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Vista previa y envío de imagen */}
+          {selectedImage ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Image source={{ uri: selectedImage.uri }} style={{ width: 80, height: 80, borderRadius: 12, marginRight: 10 }} />
+              <TouchableOpacity
+                onPress={async () => {
+                  if (!user || !chatId || !selectedImage) return;
+                  setSendingImage(true);
+                  setImageError("");
+                  try {
+                    const imageUrl = await uploadChatImageBuffer(selectedImage.uri, user.id, chatId);
+                    if (!imageUrl) {
+                      setImageError("No se pudo subir la imagen. Verifica tu conexión y los permisos del bucket.");
+                      setSendingImage(false);
+                      return;
+                    }
+                    await sendMessage(chatId, user.id, imageUrl);
+                    setSelectedImage(null);
+                    const msgs = await getMessagesForChat(chatId);
+                    setMessages(msgs);
+                  } catch (e) {
+                    setImageError(typeof e === 'string' ? `Error: ${e}` : (e && typeof e === 'object' && 'message' in e ? `Error: ${e.message}` : `Error al subir la imagen. Verifica tu conexión y los permisos del bucket.`));
+                  }
+                  setSendingImage(false);
+                }}
+                style={{ backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10, marginRight: 8 }}
+                disabled={sendingImage}
+              >
+                <Text style={{ color: colors.text, fontWeight: 'bold' }}>{sendingImage ? "Enviando..." : "Enviar imagen"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { setSelectedImage(null); setImageError(""); }}
+                style={{ backgroundColor: colors.red, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 }}
+                disabled={sendingImage}
+              >
+                <Text style={{ color: colors.text }}>Cancelar</Text>
+              </TouchableOpacity>
+              {imageError ? (
+                <Text style={{ color: colors.red, marginLeft: 10 }}>{imageError}</Text>
+              ) : null}
+            </View>
+          ) : (
+            <View style={{ flexDirection: "row", alignItems: 'center', marginBottom: 4 }}>
+              <TextInput
+                placeholder="Escribe un mensaje..."
+                placeholderTextColor={colors.muted}
+                value={message}
+                onChangeText={setMessage}
+                style={{ backgroundColor: colors.inputBg, color: colors.text, borderRadius: 16, padding: 12, flex: 1, borderWidth: 1, borderColor: colors.border, fontSize: 16, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 }}
+              />
+              <TouchableOpacity onPress={handleSendMessage} style={{ marginLeft: 10, backgroundColor: colors.primary, borderRadius: 16, paddingHorizontal: 20, justifyContent: "center", alignItems: 'center', height: 48, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 }}>
+                <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 16 }}>Enviar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={async () => {
+                if (!user || !chatId) return;
+                try {
+                  const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ['images'],
+                    allowsEditing: true,
+                    quality: 0.7,
+                  });
+                  if (!result.canceled && result.assets && result.assets.length > 0) {
+                    setSelectedImage(result.assets[0]);
+                  }
+                } catch (e) {
+                  // Puedes mostrar un error aquí
+                }
+              }} style={{ marginLeft: 10, backgroundColor: colors.green, borderRadius: 16, paddingHorizontal: 16, justifyContent: "center", alignItems: 'center', height: 48, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 }}>
+                <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 16 }}>Imagen</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </>
       )}
     </View>
