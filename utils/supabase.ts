@@ -1,3 +1,10 @@
+export async function deleteComment(comment_id: string) {
+  const { error } = await supabase
+    .from('game_comments')
+    .delete()
+    .eq('id', comment_id);
+  if (error) throw error;
+}
 // ====== HELPERS: COMMENTS ======
 export async function addComment(game_id: string, user_id: string, username: string, text: string) {
   if (!text.trim()) throw new Error('Comentario vacío');

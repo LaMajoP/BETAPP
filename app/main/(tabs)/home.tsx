@@ -1,12 +1,34 @@
 import { AuthContext } from "@/contexts/AuthContext";
-import { addComment, betOnGame, createGame, deleteGame, editGame, listComments, listGames, rateGame, uploadChatImageBuffer } from "@/utils/supabase";
+import { addComment, betOnGame, createGame, deleteComment, deleteGame, editGame, listComments, listGames, rateGame, uploadChatImageBuffer } from "@/utils/supabase";
 import * as ImagePicker from 'expo-image-picker';
 import React, { useContext, useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Image, Modal, Pressable, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Image, Modal, Pressable, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
 
 const ACCENT = "#8B4A9C", BG = "#1A0F1F", BG_MID = "#2D1B35", TEXT = "#F0E8F5", MUTED = "#9B7DA8", BORDER = "#3E2A47";
 
 export default function HomeScreen() {
+  // ...existing code...
+  const handleDeleteComment = (commentId: string) => {
+    Alert.alert(
+      "Eliminar comentario",
+      "¿Seguro que quieres eliminar este comentario?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteComment(commentId);
+              setComments(comments => comments.filter(c => c.id !== commentId));
+            } catch (e) {
+              // Optionally show error
+            }
+          },
+        },
+      ]
+    );
+  };
   // Comment modal state
   const [commentModalOpen, setCommentModalOpen] = useState(false);
   const [commentGameId, setCommentGameId] = useState<string | null>(null);
@@ -298,9 +320,19 @@ export default function HomeScreen() {
                 keyExtractor={c => c.id}
                 style={{ maxHeight: 220 }}
                 renderItem={({ item }) => (
-                  <View style={{ paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: BORDER }}>
-                    <Text style={{ color: ACCENT, fontWeight: '700' }}>{item.username ?? 'Usuario'}</Text>
-                    <Text style={{ color: TEXT }}>{item.text}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: BORDER }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: ACCENT, fontWeight: '700' }}>{item.username ?? 'Usuario'}</Text>
+                      <Text style={{ color: TEXT }}>{item.text}</Text>
+                    </View>
+                    {user?.id === item.user_id && (
+                      <Pressable
+                        style={{ marginLeft: 8, padding: 4, borderRadius: 8, backgroundColor: '#B8336A' }}
+                        onPress={() => handleDeleteComment(item.id)}
+                      >
+                        <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>Eliminar</Text>
+                      </Pressable>
+                    )}
                   </View>
                 )}
                 ListEmptyComponent={<Text style={{ color: MUTED, textAlign: 'center', marginTop: 20 }}>Sin comentarios</Text>}
