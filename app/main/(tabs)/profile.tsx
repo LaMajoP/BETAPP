@@ -37,6 +37,7 @@ type ProfileRow = {
   bio: string | null;
   phone: string | null;
   avatar_url: string | null;
+  rol?: string | null;
 };
 
 export default function Profile() {
@@ -95,42 +96,39 @@ export default function Profile() {
     }
   }, [user?.id]);
 
+  const DEFAULT_ROLE: 'CLIENT' | 'ADMIN' = 'CLIENT';
   const persistAvatarUrl = useCallback(async (publicUrl: string) => {
-    if (!user?.id) return;
+    if (!user?.id) return false;
     try {
-      // 1) UPDATE ONLY avatar_url to avoid overwriting other fields like name
-      const updateRes = await supabase
-        .from("profiles")
-        .update({ avatar_url: publicUrl })
-        .eq("id", user.id)
-        .select("id");
+      // ¿existe la fila?
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
 
-      if (!updateRes.error && Array.isArray(updateRes.data) && updateRes.data.length > 0) {
+      if (existing) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ avatar_url: publicUrl })
+          .eq('id', user.id);
+        if (error) throw error;
         setProfile((p) => ({ ...p, avatar_url: publicUrl }));
         return true;
       }
 
-      // 2) If no row exists yet, INSERT minimal required fields
-      const safeName = (profile?.name ?? "");
-      const insertRes = await supabase
-        .from("profiles")
-        .insert({ id: user.id, email: user.email ?? null, name: safeName, avatar_url: publicUrl })
-        .select("id");
-
-      if (!insertRes.error) {
-        setProfile((p) => ({ ...p, avatar_url: publicUrl }));
-        return true;
-      }
-
-      console.warn('Failed to persist avatar_url:', updateRes.error || insertRes.error);
-      setErrorMsg(`DB error (${(updateRes.error as any)?.code || (insertRes.error as any)?.code || 'unknown'}): ${(updateRes.error as any)?.message || (insertRes.error as any)?.message || 'Could not save avatar in database.'}`);
-      return false;
-    } catch (err: any) {
-      console.warn('Persist avatar exception:', err?.message || err);
-      setErrorMsg(`DB exception: ${err?.message ?? err}`);
+      // no existe -> insertar con rol CLIENT por defecto
+      const { error: insErr } = await supabase
+        .from('profiles')
+        .insert({ id: user.id, email: user.email ?? null, avatar_url: publicUrl, ROL: DEFAULT_ROLE });
+      if (insErr) throw insErr;
+      setProfile((p) => ({ ...p, avatar_url: publicUrl, rol: DEFAULT_ROLE }));
+      return true;
+    } catch (e: any) {
+      setErrorMsg(`DB error: ${e?.message ?? e}`);
       return false;
     }
-  }, [user?.id]);
+  }, [user?.id, user?.email]);
 
   // modal fields
   const [mName, setMName] = useState("");
@@ -148,7 +146,7 @@ export default function Profile() {
       // Try to load from database first
       const { data, error } = await supabase
         .from("profiles")
-        .select("name, username, email, bio, phone, avatar_url")
+        .select("name, username, email, bio, phone, avatar_url, ROL") // 👈 añade ROL
         .eq("id", user.id)
         .maybeSingle();
 
@@ -166,6 +164,7 @@ export default function Profile() {
           bio: data.bio ?? null,
           phone: data.phone ?? null,
           avatar_url: data.avatar_url ?? null,
+          rol: data.ROL ?? null, // 👈 guarda el rol en estado
         };
         console.log("Using database data");
       } else {
@@ -182,6 +181,7 @@ export default function Profile() {
             bio: parsed.bio ?? null,
             phone: parsed.phone ?? null,
             avatar_url: parsed.avatar_url ?? null,
+            rol: parsed.rol ?? null,
           };
           console.log("Using local storage data:", profileData);
         } else {
@@ -193,6 +193,7 @@ export default function Profile() {
             bio: null,
             phone: null,
             avatar_url: null,
+            rol: null,
           };
           console.log("Using default data");
         }
@@ -250,54 +251,55 @@ export default function Profile() {
     console.log("Saving profile with data:", {
       mName, mUsername, mEmail, mBio, mPhone
     });
-    
     setSaving(true);
     setErrorMsg("");
     try {
-      // Email is read-only here and not upserted
-      const payload = {
-        id: user.id, // PK = auth.users.id
-        email: user.email, // Include email for initial creation
+      // 1. Verificar si el usuario ya existe en la base de datos
+      const { data: dbProfile, error: dbError } = await supabase
+        .from("profiles")
+        .select("id, ROL")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      // 2. Solo actualizar los campos editables, nunca el rol
+      const updatePayload = {
         name: mName.trim() || null,
         username: mUsername.trim() || null,
         bio: mBio.trim() || null,
         phone: mPhone.trim() || null,
       };
 
-      console.log("Payload to save:", payload);
-
-      // Try to save to database first
-      let { error } = await supabase
-        .from("profiles")
-        .upsert(payload, { onConflict: "id", ignoreDuplicates: false })
-        .select("id")
-        .single();
-
-      console.log("Upsert result error:", error);
-
-      // If upsert fails due to RLS, try insert
-      if (error && error.code === '42501') {
-        console.log("Upsert failed due to RLS, trying insert...");
-        const { error: insertError } = await supabase
+      let error = null;
+      if (dbProfile) {
+        // El usuario existe, solo actualizar los campos editables
+        const { error: updateError } = await supabase
           .from("profiles")
-          .insert(payload)
-          .select("id")
-          .single();
-        
+          .update(updatePayload)
+          .eq("id", user.id);
+        error = updateError;
+      } else {
+        // no existe -> insertar con rol CLIENT por defecto
+        const insertPayload = {
+          id: user.id,
+          email: user.email,
+          ...updatePayload,
+          ROL: DEFAULT_ROLE,
+        };
+        const { error: insertError } = await supabase.from("profiles").insert(insertPayload);
         error = insertError;
-        console.log("Insert result error:", error);
+        if (!error) setProfile((p) => ({ ...p, rol: DEFAULT_ROLE }));
       }
 
-      // If database save fails, save to local storage as fallback
+      // Si falla la base de datos, guardar en local storage como fallback
       if (error) {
         console.log("Database save failed, saving to local storage as fallback...");
         console.log("Database error:", error);
         try {
           await AsyncStorage.setItem(`profile_${user.id}`, JSON.stringify({
-            name: payload.name,
-            username: payload.username,
-            bio: payload.bio,
-            phone: payload.phone,
+            name: updatePayload.name,
+            username: updatePayload.username,
+            bio: updatePayload.bio,
+            phone: updatePayload.phone,
           }));
           console.log("Profile saved to local storage successfully");
           // Don't throw error, just warn that it's using local storage

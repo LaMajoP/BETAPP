@@ -1,3 +1,29 @@
+// Helpers para juegos
+export async function listGames() {
+  const { data, error } = await supabase
+    .from('games')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createGame(input: { title: string; description?: string; image_url?: string; created_by: string; }) {
+  const { data, error } = await supabase
+    .from('games')
+    .insert(input)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function rateGame(game_id: string, user_id: string, stars: 1|2|3) {
+  const { error } = await supabase
+    .from('game_ratings')
+    .upsert({ game_id, user_id, stars });
+  if (error) throw error;
+}
 // Subir imagen de chat a Supabase Storage y devolver la URL pública
 export async function uploadChatImageBuffer(localUri: string, userId: string, chatId: string): Promise<string | null> {
   try {

@@ -19,8 +19,8 @@ const TEXT = "#F0E8F5";
 const MUTED = "#9B7DA8";
 const BORDER = "#3E2A47";
 
+
 export default function RegisterScreen(): JSX.Element {
-  const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [confirm, setConfirm] = useState<string>("");
@@ -31,33 +31,20 @@ export default function RegisterScreen(): JSX.Element {
   const { register } = useContext(AuthContext);
 
   const canSubmit = useMemo(() => {
-    const okName = name.trim().length >= 2;
     const okEmail = /\S+@\S+\.\S+/.test(email);
     const okPass = password.length >= 6;
     const match = password === confirm && confirm.length > 0;
-    return okName && okEmail && okPass && match;
-  }, [name, email, password, confirm]);
-
-  const slugify = (s: string) =>
-    s
-      .toLowerCase()
-      .trim()
-      .replace(/[^\p{L}\p{N}]+/gu, "_")
-      .replace(/^_+|_+$/g, "")
-      .slice(0, 24);
+    return okEmail && okPass && match;
+  }, [email, password, confirm]);
 
   const handleRegister = async () => {
     if (!canSubmit || isLoading) return;
-
     setError("");
     setIsLoading(true);
     try {
-      console.log("Starting registration process...");
       await register(email.trim(), password);
-      console.log("Registration successful, navigating to login...");
       router.replace("/(auth)/login");
     } catch (e: any) {
-      console.error("Registration error:", e);
       setError(e?.message ?? "Error al registrar");
     } finally {
       setIsLoading(false);
@@ -71,18 +58,6 @@ export default function RegisterScreen(): JSX.Element {
 
       <View style={styles.formCard}>
         <View style={styles.form}>
-          {/* Name */}
-          <View className="input-row" style={styles.inputRow}>
-            <Text style={styles.leftIcon}>👤</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Full name"
-              placeholderTextColor={MUTED}
-              value={name}
-              onChangeText={setName}
-              selectionColor={ACCENT}
-            />
-          </View>
 
           {/* Email */}
           <View style={[styles.inputRow, { marginTop: 12 }]}>

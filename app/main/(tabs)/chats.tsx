@@ -2,8 +2,8 @@ import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from "react";
 import { FlatList, Image, Text, TextInput, TouchableOpacity, View } from "react-native";
 // Importa las funciones de supabase que vas a crear
-import { useAuth } from "../../../contexts/AuthContext";
-import { getMessagesForChat, searchUsersByEmail, sendMessage, startChatWithUser, uploadChatImageBuffer } from "../../../utils/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { getMessagesForChat, searchUsersByEmail, sendMessage, startChatWithUser, uploadChatImageBuffer } from "@/utils/supabase";
 
 
 type UserResult = { id: string; email: string };
@@ -11,6 +11,7 @@ type MessageResult = { id: string; sender_id: string; content: string };
 
 const ChatsTab = () => {
   const { user } = useAuth();
+  if (!user) return <View style={{flex:1, justifyContent:'center', alignItems:'center'}}><Text style={{color:'#F0E8F5'}}>Inicia sesión para chatear</Text></View>;
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<UserResult[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserResult | null>(null);
@@ -190,7 +191,7 @@ const ChatsTab = () => {
                 if (!user || !chatId) return;
                 try {
                   const result = await ImagePicker.launchImageLibraryAsync({
-                    mediaTypes: ['images'],
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
                     allowsEditing: true,
                     quality: 0.7,
                   });
