@@ -1,5 +1,6 @@
 import { AuthContext } from "@/contexts/AuthContext";
-import { createGame, deleteGame, editGame, listGames, rateGame } from "@/utils/supabase";
+import { createGame, deleteGame, editGame, listGames, rateGame, uploadChatImageBuffer } from "@/utils/supabase";
+import * as ImagePicker from 'expo-image-picker';
 import React, { useContext, useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Image, Modal, Pressable, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
 
@@ -71,6 +72,33 @@ export default function HomeScreen() {
     await load();
   };
 
+  // Subir imagen en crear juego
+  const pickImageForCreate = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0 && user?.id) {
+      const asset = result.assets[0];
+      const url = await uploadChatImageBuffer(asset.uri, user.id, 'game');
+      if (url) setImg(url);
+    }
+  };
+  // Subir imagen en editar juego
+  const pickImageForEdit = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0 && user?.id) {
+      const asset = result.assets[0];
+      const url = await uploadChatImageBuffer(asset.uri, user.id, 'game');
+      if (url) setEditImg(url);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -124,7 +152,12 @@ export default function HomeScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Create Game</Text>
             <TextInput style={styles.input} placeholder="Title" placeholderTextColor="#9B7DA8" value={title} onChangeText={setTitle} />
-            <TextInput style={styles.input} placeholder="Image URL (optional)" placeholderTextColor="#9B7DA8" value={img} onChangeText={setImg} />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TextInput style={[styles.input, { flex: 1 }]} placeholder="Image URL (optional)" placeholderTextColor="#9B7DA8" value={img} onChangeText={setImg} />
+              <Pressable style={[styles.createBtn, { backgroundColor: '#7B4397' }]} onPress={pickImageForCreate}>
+                <Text style={{ color: '#fff', fontWeight: '800' }}>Upload</Text>
+              </Pressable>
+            </View>
             <TextInput style={[styles.input, { height: 90, textAlignVertical: 'top' }]} placeholder="Description" placeholderTextColor="#9B7DA8" value={desc} onChangeText={setDesc} multiline />
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
               <Pressable style={[styles.createBtn, { backgroundColor: "#3E2A47" }]} onPress={() => setOpen(false)}><Text style={{ color: "#fff" }}>Cancel</Text></Pressable>
@@ -139,7 +172,12 @@ export default function HomeScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Edit Game</Text>
             <TextInput style={styles.input} placeholder="Title" placeholderTextColor="#9B7DA8" value={editTitle} onChangeText={setEditTitle} />
-            <TextInput style={styles.input} placeholder="Image URL (optional)" placeholderTextColor="#9B7DA8" value={editImg} onChangeText={setEditImg} />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TextInput style={[styles.input, { flex: 1 }]} placeholder="Image URL (optional)" placeholderTextColor="#9B7DA8" value={editImg} onChangeText={setEditImg} />
+              <Pressable style={[styles.createBtn, { backgroundColor: '#7B4397' }]} onPress={pickImageForEdit}>
+                <Text style={{ color: '#fff', fontWeight: '800' }}>Upload</Text>
+              </Pressable>
+            </View>
             <TextInput style={[styles.input, { height: 90, textAlignVertical: 'top' }]} placeholder="Description" placeholderTextColor="#9B7DA8" value={editDesc} onChangeText={setEditDesc} multiline />
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
               <Pressable style={[styles.createBtn, { backgroundColor: "#3E2A47" }]} onPress={() => setEditOpen(false)}><Text style={{ color: "#fff" }}>Cancel</Text></Pressable>
