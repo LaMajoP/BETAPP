@@ -1,5 +1,5 @@
 import { AuthContext } from "@/contexts/AuthContext";
-import { createGame, listGames, rateGame } from "@/utils/supabase";
+import { createGame, deleteGame, editGame, listGames, rateGame } from "@/utils/supabase";
 import React, { useContext, useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Image, Modal, Pressable, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
 
@@ -16,6 +16,13 @@ export default function HomeScreen() {
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
   const [img, setImg] = useState("");
+
+  // modal editar
+  const [editOpen, setEditOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editImg, setEditImg] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -35,13 +42,38 @@ export default function HomeScreen() {
   const onRate = async (gameId: string, stars: 1|2|3) => {
     if (!user?.id) return;
     await rateGame(gameId, user.id, stars);
-    // opcional: feedback/UI
+  };
+
+  // Eliminar juego
+  const onDelete = async (gameId: string) => {
+    await deleteGame(gameId);
+    await load();
+  };
+
+  // Abrir modal de edición
+  const openEditModal = (game: any) => {
+    setEditId(game.id);
+    setEditTitle(game.title);
+    setEditDesc(game.description ?? "");
+    setEditImg(game.image_url ?? "");
+    setEditOpen(true);
+  };
+
+  // Guardar edición
+  const onEdit = async () => {
+    if (!editId || !editTitle.trim()) return;
+    await editGame(editId, {
+      title: editTitle.trim(),
+      description: editDesc.trim() || undefined,
+      image_url: editImg.trim() || undefined,
+    });
+    setEditOpen(false); setEditId(null); setEditTitle(""); setEditDesc(""); setEditImg("");
+    await load();
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <Text style={styles.title}>🎲 Games</Text>
         {isAdmin && (
@@ -50,7 +82,6 @@ export default function HomeScreen() {
           </Pressable>
         )}
       </View>
-
       {loading ? <ActivityIndicator /> : (
         <FlatList
           data={games}
@@ -62,7 +93,6 @@ export default function HomeScreen() {
               <View style={{ padding: 14 }}>
                 <Text style={styles.betTitle}>{item.title}</Text>
                 {!!item.description && <Text style={styles.description}>{item.description}</Text>}
-
                 {/* rating 1–3 estrellas */}
                 <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
                   {[1,2,3].map((n) => (
@@ -72,12 +102,22 @@ export default function HomeScreen() {
                     </Pressable>
                   ))}
                 </View>
+                {/* Botones ADMIN */}
+                {isAdmin && (
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                    <Pressable style={[styles.createBtn, { backgroundColor: '#7B4397' }]} onPress={() => openEditModal(item)}>
+                      <Text style={{ color: '#fff', fontWeight: '800' }}>Edit</Text>
+                    </Pressable>
+                    <Pressable style={[styles.createBtn, { backgroundColor: '#B8336A' }]} onPress={() => onDelete(item.id)}>
+                      <Text style={{ color: '#fff', fontWeight: '800' }}>Delete</Text>
+                    </Pressable>
+                  </View>
+                )}
               </View>
             </View>
           )}
         />
       )}
-
       {/* Modal crear juego (solo ADMIN) */}
       <Modal visible={open} transparent animationType="fade">
         <View style={styles.modalBg}>
@@ -89,6 +129,21 @@ export default function HomeScreen() {
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
               <Pressable style={[styles.createBtn, { backgroundColor: "#3E2A47" }]} onPress={() => setOpen(false)}><Text style={{ color: "#fff" }}>Cancel</Text></Pressable>
               <Pressable style={styles.createBtn} onPress={onCreate}><Text style={{ color: "#fff", fontWeight: "800" }}>Save</Text></Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* Modal editar juego (solo ADMIN) */}
+      <Modal visible={editOpen} transparent animationType="fade">
+        <View style={styles.modalBg}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Edit Game</Text>
+            <TextInput style={styles.input} placeholder="Title" placeholderTextColor="#9B7DA8" value={editTitle} onChangeText={setEditTitle} />
+            <TextInput style={styles.input} placeholder="Image URL (optional)" placeholderTextColor="#9B7DA8" value={editImg} onChangeText={setEditImg} />
+            <TextInput style={[styles.input, { height: 90, textAlignVertical: 'top' }]} placeholder="Description" placeholderTextColor="#9B7DA8" value={editDesc} onChangeText={setEditDesc} multiline />
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
+              <Pressable style={[styles.createBtn, { backgroundColor: "#3E2A47" }]} onPress={() => setEditOpen(false)}><Text style={{ color: "#fff" }}>Cancel</Text></Pressable>
+              <Pressable style={styles.createBtn} onPress={onEdit}><Text style={{ color: "#fff", fontWeight: "800" }}>Save</Text></Pressable>
             </View>
           </View>
         </View>

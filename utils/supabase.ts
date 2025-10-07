@@ -143,3 +143,21 @@ export async function uploadChatImage(uri: string, userId: string, chatId: strin
   const { data } = supabase.storage.from('chat-images').getPublicUrl(path);
   return data.publicUrl;
 }
+
+// Editar juego por ID (solo ADMIN)
+export async function editGame(gameId: string, data: { title?: string; image_url?: string; description?: string; }) {
+  const { error } = await supabase
+    .from('games')
+    .update(data)
+    .eq('id', gameId);
+  if (error) throw error;
+}
+
+// Eliminar juego por ID (solo ADMIN)
+export async function deleteGame(gameId: string) {
+  const { error } = await supabase
+    .from('games')
+    .delete()
+    .eq('id', gameId);
+  if (error) throw error;
+}
