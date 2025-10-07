@@ -1,5 +1,5 @@
 import { AuthContext } from "@/contexts/AuthContext";
-import { createGame, deleteGame, editGame, listGames, rateGame, uploadChatImageBuffer } from "@/utils/supabase";
+import { betOnGame, createGame, deleteGame, editGame, listGames, rateGame, uploadChatImageBuffer } from "@/utils/supabase";
 import * as ImagePicker from 'expo-image-picker';
 import React, { useContext, useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Image, Modal, Pressable, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
@@ -17,6 +17,8 @@ export default function HomeScreen() {
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
   const [img, setImg] = useState("");
+  const [minBet, setMinBet] = useState("");
+  const [maxBet, setMaxBet] = useState("");
 
   // modal editar
   const [editOpen, setEditOpen] = useState(false);
@@ -24,6 +26,12 @@ export default function HomeScreen() {
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editImg, setEditImg] = useState("");
+  const [editMinBet, setEditMinBet] = useState("");
+  const [editMaxBet, setEditMaxBet] = useState("");
+
+  const [betAmount, setBetAmount] = useState<{ [key: string]: string }>({});
+  // Feedback por juego: { [gameId]: { result, win, error } }
+  const [betFeedback, setBetFeedback] = useState<Record<string, { result?: string; win?: boolean; error?: string }>>({});
 
   const load = async () => {
     setLoading(true);
@@ -35,8 +43,17 @@ export default function HomeScreen() {
 
   const onCreate = async () => {
     if (!user?.id || !title.trim()) return;
-    await createGame({ title: title.trim(), description: desc.trim() || undefined, image_url: img.trim() || undefined, created_by: user.id });
-    setOpen(false); setTitle(""); setDesc(""); setImg("");
+    const min = parseFloat(minBet);
+    const max = parseFloat(maxBet);
+    await createGame({
+      title: title.trim(),
+      description: desc.trim() || undefined,
+      image_url: img.trim() || undefined,
+      created_by: user.id,
+      min_bet: Number.isFinite(min) ? min : undefined,
+      max_bet: Number.isFinite(max) ? max : undefined,
+    });
+    setOpen(false); setTitle(""); setDesc(""); setImg(""); setMinBet(""); setMaxBet("");
     await load();
   };
 
@@ -57,18 +74,24 @@ export default function HomeScreen() {
     setEditTitle(game.title);
     setEditDesc(game.description ?? "");
     setEditImg(game.image_url ?? "");
+    setEditMinBet(game.min_bet?.toString() ?? "");
+    setEditMaxBet(game.max_bet?.toString() ?? "");
     setEditOpen(true);
   };
 
   // Guardar edición
   const onEdit = async () => {
     if (!editId || !editTitle.trim()) return;
+    const min = parseFloat(editMinBet);
+    const max = parseFloat(editMaxBet);
     await editGame(editId, {
       title: editTitle.trim(),
       description: editDesc.trim() || undefined,
       image_url: editImg.trim() || undefined,
+      min_bet: Number.isFinite(min) ? min : undefined,
+      max_bet: Number.isFinite(max) ? max : undefined,
     });
-    setEditOpen(false); setEditId(null); setEditTitle(""); setEditDesc(""); setEditImg("");
+    setEditOpen(false); setEditId(null); setEditTitle(""); setEditDesc(""); setEditImg(""); setEditMinBet(""); setEditMaxBet("");
     await load();
   };
 
@@ -141,6 +164,56 @@ export default function HomeScreen() {
                     </Pressable>
                   </View>
                 )}
+                {/* Botón y campo de apuesta (usuarios normales) */}
+                {!isAdmin && (
+                  <View style={{ marginTop: 10 }}>
+                    <Text style={{ color: ACCENT, fontWeight: "700" }}>Apostar</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder={`Monto (${item.min_bet} - ${item.max_bet})`}
+                      keyboardType="numeric"
+                      value={betAmount[item.id] || ""}
+                      onChangeText={v => setBetAmount({ ...betAmount, [item.id]: v })}
+                    />
+                    <Pressable
+                      style={styles.createBtn}
+                      onPress={async () => {
+                        setBetFeedback((s) => ({ ...s, [item.id]: {} }));
+                        if (!user?.id) {
+                          setBetFeedback((s) => ({ ...s, [item.id]: { error: "Usuario no válido" } }));
+                          return;
+                        }
+                        const raw = betAmount[item.id];
+                        const amt = parseFloat(raw);
+                        if (!Number.isFinite(amt)) {
+                          setBetFeedback((s) => ({ ...s, [item.id]: { error: "Monto inválido" } }));
+                          return;
+                        }
+                        try {
+                          const win = await betOnGame(user.id, item, amt);
+                          setBetFeedback((s) => ({ ...s, [item.id]: { result: win ? "¡Ganaste el doble!" : "Perdiste la apuesta", win } }));
+                          await load(); // refresca juegos y saldos
+                        } catch (e: any) {
+                          setBetFeedback((s) => ({ ...s, [item.id]: { error: e.message } }));
+                        }
+                      }}
+                    >
+                      <Text style={{ color: "#fff", fontWeight: "800" }}>Apostar</Text>
+                    </Pressable>
+                    {/* Mensajes por juego */}
+                    {(() => {
+                      const fb = betFeedback[item.id];
+                      return (
+                        <>
+                          {!!fb?.result && (
+                            <Text style={{ color: fb.win ? "green" : "red" }}>{fb.result}</Text>
+                          )}
+                          {!!fb?.error && <Text style={{ color: "red" }}>{fb.error}</Text>}
+                        </>
+                      );
+                    })()}
+                  </View>
+                )}
               </View>
             </View>
           )}
@@ -159,6 +232,8 @@ export default function HomeScreen() {
               </Pressable>
             </View>
             <TextInput style={[styles.input, { height: 90, textAlignVertical: 'top' }]} placeholder="Description" placeholderTextColor="#9B7DA8" value={desc} onChangeText={setDesc} multiline />
+            <TextInput style={styles.input} placeholder="Min bet" keyboardType="numeric" value={minBet} onChangeText={setMinBet} />
+            <TextInput style={styles.input} placeholder="Max bet" keyboardType="numeric" value={maxBet} onChangeText={setMaxBet} />
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
               <Pressable style={[styles.createBtn, { backgroundColor: "#3E2A47" }]} onPress={() => setOpen(false)}><Text style={{ color: "#fff" }}>Cancel</Text></Pressable>
               <Pressable style={styles.createBtn} onPress={onCreate}><Text style={{ color: "#fff", fontWeight: "800" }}>Save</Text></Pressable>
@@ -179,6 +254,8 @@ export default function HomeScreen() {
               </Pressable>
             </View>
             <TextInput style={[styles.input, { height: 90, textAlignVertical: 'top' }]} placeholder="Description" placeholderTextColor="#9B7DA8" value={editDesc} onChangeText={setEditDesc} multiline />
+            <TextInput style={styles.input} placeholder="Min bet" keyboardType="numeric" value={editMinBet} onChangeText={setEditMinBet} />
+            <TextInput style={styles.input} placeholder="Max bet" keyboardType="numeric" value={editMaxBet} onChangeText={setEditMaxBet} />
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
               <Pressable style={[styles.createBtn, { backgroundColor: "#3E2A47" }]} onPress={() => setEditOpen(false)}><Text style={{ color: "#fff" }}>Cancel</Text></Pressable>
               <Pressable style={styles.createBtn} onPress={onEdit}><Text style={{ color: "#fff", fontWeight: "800" }}>Save</Text></Pressable>

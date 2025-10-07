@@ -1,4 +1,28 @@
-// Helpers para juegos
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createClient } from '@supabase/supabase-js';
+import 'react-native-url-polyfill/auto';
+
+// ====== CLIENT ======
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "https://your-project.supabase.co";
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_API_KEY ?? "your-anon-key";
+
+console.log("Supabase URL:", supabaseUrl ? "✅ Set" : "❌ Missing");
+console.log("Supabase Key:", supabaseAnonKey ? "✅ Set" : "❌ Missing");
+
+if (supabaseUrl === "https://your-project.supabase.co" || supabaseAnonKey === "your-anon-key") {
+  console.warn("⚠️  Supabase credentials not configured! Please set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_API_KEY in your .env file");
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+});
+
+// ====== HELPERS: GAMES ======
 export async function listGames() {
   const { data, error } = await supabase
     .from('games')
@@ -8,7 +32,14 @@ export async function listGames() {
   return data ?? [];
 }
 
-export async function createGame(input: { title: string; description?: string; image_url?: string; created_by: string; }) {
+export async function createGame(input: {
+  title: string;
+  description?: string;
+  image_url?: string;
+  created_by: string;
+  min_bet?: number;
+  max_bet?: number;
+}) {
   const { data, error } = await supabase
     .from('games')
     .insert(input)
@@ -18,13 +49,47 @@ export async function createGame(input: { title: string; description?: string; i
   return data;
 }
 
+export async function editGame(
+  gameId: string,
+  data: {
+    title?: string;
+    image_url?: string;
+    description?: string;
+    min_bet?: number;
+    max_bet?: number;
+  }
+) {
+  const { error } = await supabase
+    .from('games')
+    .update(data)
+    .eq('id', gameId);
+  if (error) throw error;
+}
+
+export async function deleteGame(gameId: string) {
+  const { error } = await supabase
+    .from('games')
+    .delete()
+    .eq('id', gameId);
+  if (error) throw error;
+}
+
+export async function setGameBetLimits(gameId: string, min_bet: number, max_bet: number) {
+  const { error } = await supabase
+    .from('games')
+    .update({ min_bet, max_bet })
+    .eq('id', gameId);
+  if (error) throw error;
+}
+
 export async function rateGame(game_id: string, user_id: string, stars: 1|2|3) {
   const { error } = await supabase
     .from('game_ratings')
     .upsert({ game_id, user_id, stars });
   if (error) throw error;
 }
-// Subir imagen de chat a Supabase Storage y devolver la URL pública
+
+// ====== HELPERS: STORAGE (CHAT IMAGES) ======
 export async function uploadChatImageBuffer(localUri: string, userId: string, chatId: string): Promise<string | null> {
   try {
     const response = await fetch(localUri);
@@ -45,30 +110,26 @@ export async function uploadChatImageBuffer(localUri: string, userId: string, ch
   }
 }
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createClient } from '@supabase/supabase-js';
-import 'react-native-url-polyfill/auto';
+export async function uploadChatImage(uri: string, userId: string, chatId: string): Promise<string> {
+  const fileExt = uri.split('.').pop();
+  const fileName = `${chatId}_${userId}_${Date.now()}.${fileExt}`;
+  const path = `chat-images/${fileName}`;
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "https://your-project.supabase.co";
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_API_KEY ?? "your-anon-key";
+  const response = await fetch(uri);
+  const blob = await response.blob();
 
-console.log("Supabase URL:", supabaseUrl ? "✅ Set" : "❌ Missing");
-console.log("Supabase Key:", supabaseAnonKey ? "✅ Set" : "❌ Missing");
+  const { error } = await supabase.storage.from('chat-images').upload(path, blob, {
+    cacheControl: '3600',
+    upsert: false,
+    contentType: blob.type,
+  });
+  if (error) throw error;
 
-if (supabaseUrl === "https://your-project.supabase.co" || supabaseAnonKey === "your-anon-key") {
-  console.warn("⚠️  Supabase credentials not configured! Please set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_API_KEY in your .env file");
+  const { data } = supabase.storage.from('chat-images').getPublicUrl(path);
+  return data.publicUrl;
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
-  },
-});
-
-// Buscar usuarios por email (excepto el actual)
+// ====== HELPERS: CHATS ======
 export async function searchUsersByEmail(email: string, excludeId?: string) {
   const { data, error } = await supabase
     .from('profiles')
@@ -80,9 +141,7 @@ export async function searchUsersByEmail(email: string, excludeId?: string) {
   return data ?? [];
 }
 
-// Iniciar o buscar chat entre dos usuarios
 export async function startChatWithUser(user1_id: string, user2_id: string) {
-  // Buscar si ya existe
   const { data: existing, error: err1 } = await supabase
     .from('chats')
     .select('*')
@@ -90,7 +149,7 @@ export async function startChatWithUser(user1_id: string, user2_id: string) {
     .limit(1);
   if (err1) throw err1;
   if (existing && existing.length > 0) return existing[0];
-  // Si no existe, crear
+
   const { data, error } = await supabase
     .from('chats')
     .insert([{ user1_id, user2_id }])
@@ -100,7 +159,6 @@ export async function startChatWithUser(user1_id: string, user2_id: string) {
   return data;
 }
 
-// Obtener mensajes de un chat
 export async function getMessagesForChat(chat_id: string) {
   const { data, error } = await supabase
     .from('messages')
@@ -111,8 +169,6 @@ export async function getMessagesForChat(chat_id: string) {
   return data ?? [];
 }
 
-
-// Enviar mensaje
 export async function sendMessage(chat_id: string, sender_id: string, content: string) {
   const { error } = await supabase
     .from('messages')
@@ -120,44 +176,65 @@ export async function sendMessage(chat_id: string, sender_id: string, content: s
   if (error) throw error;
 }
 
-// Subir imagen de chat a Supabase Storage y devolver la URL
-export async function uploadChatImage(uri: string, userId: string, chatId: string): Promise<string> {
-  // Obtener el nombre del archivo
-  const fileExt = uri.split('.').pop();
-  const fileName = `${chatId}_${userId}_${Date.now()}.${fileExt}`;
-  const path = `chat-images/${fileName}`;
+// ====== HELPERS: WALLET / BETS ======
+export async function updateBalance(userId: string, amount: number) {
+  const { error } = await supabase.rpc('increment_balance', { user_id: userId, amount });
+  if (error) throw error;
+}
 
-  // Obtener el blob de la imagen
-  const response = await fetch(uri);
-  const blob = await response.blob();
+export async function getBalance(userId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('balance')
+    .eq('id', userId)
+    .single();
+  if (error) throw error;
+  return data?.balance ?? 0;
+}
 
-  // Subir a Supabase Storage
-  const { error } = await supabase.storage.from('chat-images').upload(path, blob, {
-    cacheControl: '3600',
-    upsert: false,
-    contentType: blob.type,
+export async function placeBet(userId: string, gameId: string, amount: number) {
+  const balance = await getBalance(userId);
+  if (balance < amount) throw new Error('Saldo insuficiente');
+
+  const { error } = await supabase
+    .from('bets')
+    .insert({ user_id: userId, game_id: gameId, amount });
+  if (error) throw error;
+
+  await updateBalance(userId, -amount);
+}
+
+/**
+ * Apuesta con resultado win/lose y retorno 2x (incluye la apuesta).
+ * Lógica: primero se descuenta la apuesta. Si gana, se abona 2*amount (stake+ganancia).
+ * Si pierde, no se reembolsa y se acredita al creador del juego.
+ */
+export async function betOnGame(clientId: string, game: any, amount: number) {
+  if (amount < game.min_bet || amount > game.max_bet) throw new Error('Monto fuera de límites');
+
+  const clientBalance = await getBalance(clientId);
+  if (clientBalance < amount) throw new Error('Saldo insuficiente');
+
+  const win = Math.random() < 0.5;
+
+  // Registrar apuesta
+  await supabase.from('bets').insert({
+    user_id: clientId,
+    game_id: game.id,
+    amount,
+    result: win ? 'WIN' : 'LOSE',
   });
-  if (error) throw error;
 
-  // Obtener la URL pública
-  const { data } = supabase.storage.from('chat-images').getPublicUrl(path);
-  return data.publicUrl;
-}
+  // Descontar stake primero
+  await updateBalance(clientId, -amount);
 
-// Editar juego por ID (solo ADMIN)
-export async function editGame(gameId: string, data: { title?: string; image_url?: string; description?: string; }) {
-  const { error } = await supabase
-    .from('games')
-    .update(data)
-    .eq('id', gameId);
-  if (error) throw error;
-}
+  if (win) {
+    // Retorno total 2x (stake + ganancia)
+    await updateBalance(clientId, amount * 2);
+  } else {
+    // El admin/creador recibe lo perdido
+    await updateBalance(game.created_by, amount);
+  }
 
-// Eliminar juego por ID (solo ADMIN)
-export async function deleteGame(gameId: string) {
-  const { error } = await supabase
-    .from('games')
-    .delete()
-    .eq('id', gameId);
-  if (error) throw error;
+  return win;
 }

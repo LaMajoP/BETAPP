@@ -53,11 +53,11 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* 4) LIVE -> app/main/(tabs)/live.tsx */}
+      {/* 4) WALLET -> app/main/(tabs)/wallet.tsx */}
       <Tabs.Screen
-        name="live"
+        name="wallet"
         options={{
-          title: "Live",
+          title: "wallet",
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="soccer" size={size} color={color} />
           ),
