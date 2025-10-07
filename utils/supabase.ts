@@ -1,3 +1,21 @@
+// ====== HELPERS: COMMENTS ======
+export async function addComment(game_id: string, user_id: string, username: string, text: string) {
+  if (!text.trim()) throw new Error('Comentario vacío');
+  const { error } = await supabase
+    .from('game_comments')
+    .insert({ game_id, user_id, username, text });
+  if (error) throw error;
+}
+
+export async function listComments(game_id: string) {
+  const { data, error } = await supabase
+    .from('game_comments')
+    .select('id, user_id, username, text, created_at')
+    .eq('game_id', game_id)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';

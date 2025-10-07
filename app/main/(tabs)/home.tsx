@@ -1,5 +1,5 @@
 import { AuthContext } from "@/contexts/AuthContext";
-import { betOnGame, createGame, deleteGame, editGame, listGames, rateGame, uploadChatImageBuffer } from "@/utils/supabase";
+import { addComment, betOnGame, createGame, deleteGame, editGame, listComments, listGames, rateGame, uploadChatImageBuffer } from "@/utils/supabase";
 import * as ImagePicker from 'expo-image-picker';
 import React, { useContext, useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Image, Modal, Pressable, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
@@ -7,6 +7,35 @@ import { ActivityIndicator, FlatList, Image, Modal, Pressable, StatusBar, StyleS
 const ACCENT = "#8B4A9C", BG = "#1A0F1F", BG_MID = "#2D1B35", TEXT = "#F0E8F5", MUTED = "#9B7DA8", BORDER = "#3E2A47";
 
 export default function HomeScreen() {
+  // Comment modal state
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
+  const [commentGameId, setCommentGameId] = useState<string | null>(null);
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [commentLoading, setCommentLoading] = useState(false);
+
+  // Load comments for a game
+  const openComments = async (gameId: string) => {
+    setCommentGameId(gameId);
+    setCommentModalOpen(true);
+    setCommentLoading(true);
+    try {
+      setComments(await listComments(gameId));
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!user?.id || !commentGameId || !newComment.trim()) return;
+    try {
+      await addComment(commentGameId, user.id, user.email ?? "", newComment.trim());
+      setNewComment("");
+      setComments(await listComments(commentGameId));
+    } catch (e) {
+      // Optionally show error
+    }
+  };
   const { user } = useContext(AuthContext);
   const isAdmin = user?.rol === 'ADMIN';
   const [games, setGames] = useState<any[]>([]);
@@ -161,6 +190,13 @@ export default function HomeScreen() {
             <View style={styles.card}>
               {!!item.image_url && <Image source={{ uri: item.image_url }} style={styles.image} />}
               <View style={{ padding: 14 }}>
+                {/* Comment button/icon */}
+                <Pressable
+                  style={{ position: 'absolute', top: 10, right: 10, backgroundColor: ACCENT, borderRadius: 20, padding: 6, zIndex: 2 }}
+                  onPress={() => openComments(item.id)}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>💬</Text>
+                </Pressable>
                 <Text style={styles.betTitle}>{item.title}</Text>
                 {!!item.description && <Text style={styles.description}>{item.description}</Text>}
                 {/* rating 1–3 estrellas */}
@@ -251,6 +287,42 @@ export default function HomeScreen() {
         />
       )}
       {/* Modal crear juego (solo ADMIN) */}
+      {/* Modal comentarios */}
+      <Modal visible={commentModalOpen} transparent animationType="fade">
+        <View style={styles.modalBg}>
+          <View style={[styles.modalCard, { maxHeight: 500 }]}> 
+            <Text style={styles.modalTitle}>Comentarios</Text>
+            {commentLoading ? <ActivityIndicator /> : (
+              <FlatList
+                data={comments}
+                keyExtractor={c => c.id}
+                style={{ maxHeight: 220 }}
+                renderItem={({ item }) => (
+                  <View style={{ paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: BORDER }}>
+                    <Text style={{ color: ACCENT, fontWeight: '700' }}>{item.username ?? 'Usuario'}</Text>
+                    <Text style={{ color: TEXT }}>{item.text}</Text>
+                  </View>
+                )}
+                ListEmptyComponent={<Text style={{ color: MUTED, textAlign: 'center', marginTop: 20 }}>Sin comentarios</Text>}
+              />
+            )}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="Escribe un comentario..."
+                value={newComment}
+                onChangeText={setNewComment}
+              />
+              <Pressable style={styles.createBtn} onPress={handleAddComment}>
+                <Text style={{ color: '#fff', fontWeight: '800' }}>Enviar</Text>
+              </Pressable>
+            </View>
+            <Pressable style={[styles.createBtn, { backgroundColor: '#3E2A47', marginTop: 10 }]} onPress={() => setCommentModalOpen(false)}>
+              <Text style={{ color: '#fff' }}>Cerrar</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
       <Modal visible={open} transparent animationType="fade">
         <View style={styles.modalBg}>
           <View style={styles.modalCard}>
