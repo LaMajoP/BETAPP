@@ -82,10 +82,12 @@ export async function setGameBetLimits(gameId: string, min_bet: number, max_bet:
   if (error) throw error;
 }
 
-export async function rateGame(game_id: string, user_id: string, stars: 1|2|3) {
+export async function rateGame(game_id: string, user_id: string, stars: number) {
+  // Asegura que el score esté entre 1 y 5
+  const score = Math.max(1, Math.min(5, Math.round(stars)));
   const { error } = await supabase
     .from('game_ratings')
-    .upsert({ game_id, user_id, stars });
+    .upsert({ game_id, user_id, stars: score });
   if (error) throw error;
 }
 

@@ -10,6 +10,8 @@ export default function HomeScreen() {
   const { user } = useContext(AuthContext);
   const isAdmin = user?.rol === 'ADMIN';
   const [games, setGames] = useState<any[]>([]);
+  // Track which games the user has rated (by gameId)
+  const [ratedGames, setRatedGames] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
 
   // modal crear
@@ -35,8 +37,18 @@ export default function HomeScreen() {
 
   const load = async () => {
     setLoading(true);
-    try { setGames(await listGames()); }
-    finally { setLoading(false); }
+    try {
+      const loadedGames = await listGames();
+      setGames(loadedGames);
+      // Build ratedGames map for CLIENT
+      if (user && user.rol !== 'ADMIN') {
+        const userRatings: Record<string, number> = {};
+        loadedGames.forEach(g => {
+          if (g.my_rating) userRatings[g.id] = g.my_rating;
+        });
+        setRatedGames(userRatings);
+      }
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -57,9 +69,16 @@ export default function HomeScreen() {
     await load();
   };
 
-  const onRate = async (gameId: string, stars: 1|2|3) => {
-    if (!user?.id) return;
-    await rateGame(gameId, user.id, stars);
+  const onRate = async (gameId: string, stars: number) => {
+    if (!user?.id || isAdmin) return;
+    // Prevent rating again if already rated
+    if (ratedGames[gameId]) return;
+    try {
+      await rateGame(gameId, user.id, stars);
+      setRatedGames(s => ({ ...s, [gameId]: stars }));
+      // Optionally reload games to update average, etc
+      setGames(await listGames());
+    } catch {}
   };
 
   // Eliminar juego
@@ -146,12 +165,24 @@ export default function HomeScreen() {
                 {!!item.description && <Text style={styles.description}>{item.description}</Text>}
                 {/* rating 1–3 estrellas */}
                 <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-                  {[1,2,3].map((n) => (
-                    <Pressable key={n} onPress={() => onRate(item.id, n as 1|2|3)} style={styles.star}>
-                      <Text style={{ color: "#FFD700", fontSize: 18 }}>★</Text>
-                      <Text style={{ color: "#fff", fontSize: 12 }}>{n}</Text>
-                    </Pressable>
-                  ))}
+                  {[1,2,3,4,5].map((n) => {
+                    // Use ratedGames for CLIENT, item.my_rating for ADMIN
+                    const selected = (user && user.rol !== 'ADMIN') ? ratedGames[item.id] === n : item.my_rating === n;
+                    const alreadyRated = (user && user.rol !== 'ADMIN') ? !!ratedGames[item.id] : false;
+                    return (
+                      <Pressable
+                        key={n}
+                        onPress={() => {
+                          if (!alreadyRated) onRate(item.id, n);
+                        }}
+                        style={[styles.star, selected && { borderColor: ACCENT, backgroundColor: ACCENT+"30" }]}
+                        disabled={!user || isAdmin || alreadyRated}
+                      >
+                        <Text style={{ color: n <= ((user && user.rol !== 'ADMIN') ? (ratedGames[item.id] ?? 0) : (item.my_rating ?? 0)) ? "#FFD700" : "#fff", fontSize: 18 }}>★</Text>
+                        <Text style={{ color: "#fff", fontSize: 12 }}>{n}</Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
                 {/* Botones ADMIN */}
                 {isAdmin && (
